@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Git Simulator — QA Training</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: #13161e;
+    --border: #1e2330;
+    --green: #39d98a;
+    --green-dim: #1a4d35;
+    --yellow: #ffd166;
+    --blue: #4da6ff;
+    --red: #ff6b6b;
+    --purple: #c084fc;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --branch-main: #ffd166;
+    --branch-feature: #39d98a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--panel);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--green);
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--green-dim);
+    color: var(--green);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .mission-indicator {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .mission-dots { display: flex; gap: 5px; }
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+  .dot.done { background: var(--green); }
+  .dot.active { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    grid-template-rows: 1fr;
+    flex: 1;
+    overflow: hidden;
+    height: calc(100vh - 53px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* REPO TREE */
+  .repo-section { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .repo-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+
+  .current-branch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    background: var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+
+  .branch-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .branch-list { display: flex; flex-direction: column; gap: 4px; }
+  .branch-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .branch-item:hover { background: var(--border); color: var(--text); }
+  .branch-item.active { color: var(--text); background: rgba(57,217,138,0.08); }
+
+  /* FILE TREE */
+  .file-tree { padding: 12px 16px; flex: 1; overflow-y: auto; }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    padding: 5px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .file-item:hover { background: var(--border); }
+  .file-icon { font-size: 0.9rem; }
+  .file-status {
+    margin-left: auto;
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .status-modified { background: rgba(255,209,102,0.15); color: var(--yellow); }
+  .status-new { background: rgba(57,217,138,0.15); color: var(--green); }
+  .status-staged { background: rgba(77,166,255,0.15); color: var(--blue); }
+
+  /* HISTORY */
+  .history-section { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .commit-list { display: flex; flex-direction: column; gap: 6px; }
+  .commit-item {
+    font-size: 0.7rem;
+    padding: 8px 10px;
+    background: var(--border);
+    border-radius: 6px;
+    border-left: 2px solid var(--muted);
+    transition: border-color 0.2s;
+  }
+  .commit-item.latest { border-left-color: var(--green); }
+  .commit-msg { color: var(--text); margin-bottom: 3px; font-size: 0.72rem; }
+  .commit-meta { color: var(--muted); font-size: 0.65rem; }
+  .commit-hash { color: var(--purple); }
+
+  /* TERMINAL */
+  .terminal-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0a0c10;
+  }
+
+  .terminal-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    background: var(--panel);
+    gap: 4px;
+  }
+
+  .tab {
+    padding: 10px 16px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .terminal-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    font-size: 0.8rem;
+    line-height: 1.7;
+  }
+
+  .line { display: flex; gap: 8px; margin-bottom: 2px; flex-wrap: wrap; }
+  .prompt { color: var(--green); white-space: nowrap; flex-shrink: 0; }
+  .cmd { color: var(--text); }
+  .out-success { color: var(--green); }
+  .out-info { color: var(--blue); }
+  .out-warn { color: var(--yellow); }
+  .out-error { color: var(--red); }
+  .out-muted { color: var(--muted); }
+  .out-branch { color: var(--purple); }
+  .out-diff-add { color: var(--green); }
+  .out-diff-rem { color: var(--red); }
+
+  .terminal-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .prompt-static { color: var(--green); font-size: 0.8rem; white-space: nowrap; }
+
+  #terminal-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    caret-color: var(--green);
+  }
+
+  .run-btn {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid rgba(57,217,138,0.3);
+    padding: 5px 14px;
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .run-btn:hover { background: rgba(57,217,138,0.2); }
+
+  /* MISSIONS PANEL */
+  .missions-panel {
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mission-card {
+    margin: 12px;
+    padding: 14px;
+    background: var(--panel);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .mission-number {
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .mission-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+
+  .mission-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .mission-steps { display: flex; flex-direction: column; gap: 6px; }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.72rem;
+    padding: 7px 10px;
+    background: var(--bg);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .step.done {
+    border-color: var(--green-dim);
+    background: rgba(57,217,138,0.05);
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+  .step-icon { flex-shrink: 0; font-size: 0.8rem; }
+
+  .hints-section { padding: 0 12px; flex: 1; overflow-y: auto; }
+  .hints-title {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    padding-top: 4px;
+  }
+
+  .hint-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--border);
+    border: 1px solid #2a3040;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.7rem;
+    margin: 3px 3px 3px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--blue);
+  }
+  .hint-chip:hover { background: rgba(77,166,255,0.1); border-color: var(--blue); }
+
+  .success-banner {
+    margin: 12px;
+    padding: 14px;
+    background: rgba(57,217,138,0.08);
+    border: 1px solid var(--green-dim);
+    border-radius: 10px;
+    font-size: 0.75rem;
+    color: var(--green);
+    display: none;
+    text-align: center;
+    line-height: 1.7;
+  }
+  .success-banner.show { display: block; }
+  .success-banner .big { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+
+  .next-btn {
+    margin: 0 12px 12px;
+    width: calc(100% - 24px);
+    padding: 10px;
+    background: var(--green);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: none;
+    transition: opacity 0.2s;
+  }
+  .next-btn:hover { opacity: 0.85; }
+  .next-btn.show { display: block; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .branch-graph {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.7rem;
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 7px;
+    height: 13px;
+    background: var(--green);
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">git<span>lab</span> <span style="color:var(--purple)">~</span> simulador</div>
+  <div class="badge">QA Training</div>
+  <div class="mission-indicator">
+    <span>missões</span>
+    <div class="mission-dots">
+      <div class="dot active" id="dot-0"></div>
+      <div class="dot" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+      <div class="dot" id="dot-3"></div>
+      <div class="dot" id="dot-4"></div>
+    </div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="panel-title">📁 repositório</div>
+
+    <div class="repo-section">
+      <div class="repo-label">branch atual</div>
+      <div class="current-branch">
+        <div class="branch-dot" id="current-branch-dot" style="background:var(--branch-main)"></div>
+        <span id="current-branch-name">main</span>
+      </div>
+      <div class="repo-label">todas as branches</div>
+      <div class="branch-list" id="branch-list">
+        <div class="branch-item active" data-branch="main">
+          <div class="branch-dot" style="background:var(--branch-main)"></div>
+          main
+        </div>
+      </div>
+    </div>
+
+    <div class="branch-graph" id="branch-graph">
+      <div style="color:var(--muted);font-size:0.65rem;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">grafo de branches</div>
+      <div id="graph-lines" style="font-family:'JetBrains Mono';line-height:1.8;font-size:0.72rem">
+        <span style="color:var(--branch-main)">● </span><span style="color:var(--muted)">main</span>
+      </div>
+    </div>
+
+    <div class="file-tree" id="file-tree">
+      <div class="repo-label" style="margin-bottom:8px">arquivos</div>
+      <div class="file-item"><span class="file-icon">📄</span> README.md</div>
+    </div>
+
+    <div class="history-section">
+      <div class="repo-label" style="margin-bottom:8px">histórico de commits</div>
+      <div class="commit-list" id="commit-list">
+        <div class="commit-item latest">
+          <div class="commit-msg">Initial commit</div>
+          <div class="commit-meta"><span class="commit-hash">a1b2c3d</span> · agora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="terminal-panel">
+    <div class="terminal-tabs">
+      <div class="tab active">terminal</div>
+      <div class="tab" style="color:var(--muted);cursor:default">~/pratica-qa</div>
+    </div>
+
+    <div class="terminal-output" id="output">
+      <div class="line"><span class="out-info">Git Simulator — Ambiente de prática QA</span></div>
+      <div class="line"><span class="out-muted">─────────────────────────────────────────</span></div>
+      <div class="line"><span class="out-muted">Repositório: pratica-qa &nbsp;|&nbsp; Branch: main</span></div>
+      <div class="line">&nbsp;</div>
+      <div class="line"><span class="out-warn">💡 Olhe o painel de Missões →  para saber o que fazer!</span></div>
+      <div class="line">&nbsp;</div>
+    </div>
+
+    <div class="terminal-input-row">
+      <span class="prompt-static" id="prompt-text">natalia@pratica-qa (main) $</span>
+      <input type="text" id="terminal-input" placeholder="digite um comando git..." autocomplete="off" spellcheck="false" />
+      <button class="run-btn" onclick="runCommand()">Enter ↵</button>
+    </div>
+  </div>
+
+  <!-- MISSIONS -->
+  <div class="missions-panel">
+    <div class="panel-title">🎯 missão atual</div>
+
+    <div class="mission-card" id="mission-card">
+      <div class="mission-number" id="mission-number">Missão 1 de 5</div>
+      <div class="mission-title" id="mission-title">Explorar o repositório</div>
+      <div class="mission-desc" id="mission-desc">Antes de testar qualquer coisa, você precisa entender o estado atual do repositório. Veja em qual branch você está e quais arquivos existem.</div>
+      <div class="mission-steps" id="mission-steps"></div>
+    </div>
+
+    <div class="success-banner" id="success-banner">
+      <div class="big">✅ Missão completa!</div>
+      <span id="success-msg"></span>
+    </div>
+
+    <button class="next-btn" id="next-btn" onclick="nextMission()">Próxima missão →</button>
+
+    <div class="hints-section">
+      <div class="hints-title">💡 comandos úteis</div>
+      <div id="hints-container"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+const state = {
+  currentBranch: 'main',
+  branches: ['main'],
+  files: { 'README.md': 'conteúdo inicial' },
+  stagedFiles: [],
+  modifiedFiles: [],
+  commits: [{ hash: 'a1b2c3d', msg: 'Initial commit', branch: 'main' }],
+  missionIndex: 0,
+  stepsDone: [],
+};
+
+// ─── MISSIONS ────────────────────────────────────────────────
+const missions = [
+  {
+    title: 'Explorar o repositório',
+    desc: 'Antes de testar qualquer coisa, você precisa entender o estado atual do repositório. Veja em qual branch você está e quais arquivos existem.',
+    steps: [
+      { id: 'status', text: 'Ver o status com git status', cmd: 'git status' },
+      { id: 'log',    text: 'Ver histórico com git log',   cmd: 'git log' },
+    ],
+    hints: ['git status', 'git log', 'git branch'],
+    success: 'Ótimo! Você sabe como inspecionar um repositório. No trabalho, esses são os primeiros comandos antes de começar a testar!'
+  },
+  {
+    title: 'Criar uma branch de feature',
+    desc: 'O dev terminou a feature de cadastro. Você precisa criar uma branch para testar essa feature separadamente do main.',
+    steps: [
+      { id: 'branch_create', text: 'Criar branch: git checkout -b feature-cadastro', cmd: 'git checkout -b feature-cadastro' },
+      { id: 'branch_check',  text: 'Confirmar a troca com git status',              cmd: 'git status' },
+    ],
+    hints: ['git checkout -b feature-cadastro', 'git branch', 'git status'],
+    success: 'Perfeito! Você criou e trocou para a nova branch. Agora suas alterações ficam isoladas do main!'
+  },
+  {
+    title: 'Simular alteração e commit',
+    desc: 'Você encontrou que precisa registrar uma observação de teste. Adicione o arquivo e faça um commit documentando isso.',
+    steps: [
+      { id: 'add',    text: 'Adicionar arquivo: git add README.md', cmd: 'git add README.md' },
+      { id: 'commit', text: 'Fazer commit com mensagem descritiva',  cmd: 'git commit' },
+    ],
+    hints: ['git add README.md', 'git add .', 'git commit -m "mensagem"', 'git status'],
+    success: 'Excelente! Commit feito. Boas mensagens de commit são essenciais — ajudam o time a entender o que mudou!'
+  },
+  {
+    title: 'Verificar diferenças (diff)',
+    desc: 'Antes de aprovar uma feature, você quer ver exatamente o que o dev alterou. Use o git diff para inspecionar mudanças.',
+    steps: [
+      { id: 'diff',   text: 'Ver diferenças com git diff',          cmd: 'git diff' },
+      { id: 'log2',   text: 'Ver log completo dos commits',          cmd: 'git log' },
+    ],
+    hints: ['git diff', 'git diff main', 'git log', 'git log --oneline'],
+    success: 'Muito bem! O git diff é uma das ferramentas mais úteis para QA — você vê exatamente o que mudou antes de testar!'
+  },
+  {
+    title: 'Voltar para o main (merge flow)',
+    desc: 'Os testes passaram! Agora volte para a branch main, como acontece quando uma feature é aprovada e vai para produção.',
+    steps: [
+      { id: 'checkout_main', text: 'Voltar ao main: git checkout main', cmd: 'git checkout main' },
+      { id: 'final_status',  text: 'Confirmar que está no main',        cmd: 'git status' },
+    ],
+    hints: ['git checkout main', 'git branch', 'git status', 'git log'],
+    success: '🎉 Parabéns! Você completou todas as missões! Você agora sabe os comandos fundamentais do Git para QA: status, log, branch, checkout, add, commit e diff.'
+  }
+];
+
+// ─── RENDER MISSION ──────────────────────────────────────────
+function renderMission() {
+  const m = missions[state.missionIndex];
+  document.getElementById('mission-number').textContent = `Missão ${state.missionIndex + 1} de ${missions.length}`;
+  document.getElementById('mission-title').textContent = m.title;
+  document.getElementById('mission-desc').textContent = m.desc;
+
+  const stepsEl = document.getElementById('mission-steps');
+  stepsEl.innerHTML = '';
+  m.steps.forEach(step => {
+    const done = state.stepsDone.includes(step.id);
+    stepsEl.innerHTML += `
+      <div class="step ${done ? 'done' : ''}" id="step-${step.id}">
+        <span class="step-icon">${done ? '✅' : '⬜'}</span>
+        <span>${step.text}</span>
+      </div>`;
+  });
+
+  const hintsEl = document.getElementById('hints-container');
+  hintsEl.innerHTML = '';
+  m.hints.forEach(h => {
+    hintsEl.innerHTML += `<span class="hint-chip" onclick="fillCommand('${h}')">$ ${h}</span>`;
+  });
+
+  // dots
+  missions.forEach((_, i) => {
+    const dot = document.getElementById(`dot-${i}`);
+    if (!dot) return;
+    dot.className = 'dot';
+    if (i < state.missionIndex) dot.classList.add('done');
+    else if (i === state.missionIndex) dot.classList.add('active');
+  });
+
+  document.getElementById('success-banner').classList.remove('show');
+  document.getElementById('next-btn').classList.remove('show');
+}
+
+function fillCommand(cmd) {
+  document.getElementById('terminal-input').value = cmd;
+  document.getElementById('terminal-input').focus();
+}
+
+function checkMissionStep(cmd) {
+  const m = missions[state.missionIndex];
+  m.steps.forEach(step => {
+    if (state.stepsDone.includes(step.id)) return;
+    const normalized = cmd.trim().toLowerCase();
+    const target = step.cmd.toLowerCase();
+    if (normalized.startsWith(target.split(' ')[0]) && normalized.includes(target.split(' ').slice(1).join(' '))) {
+      state.stepsDone.push(step.id);
+      const el = document.getElementById(`step-${step.id}`);
+      if (el) { el.classList.add('done'); el.querySelector('.step-icon').textContent = '✅'; }
+    }
+    // loose match for git commit with -m
+    if (step.id === 'commit' && normalized.startsWith('git commit')) {
+      if (!state.stepsDone.includes('commit')) {
+        state.stepsDone.push('commit');
+        const el = document.getElementById(`step-commit`);
+        if (el) { el.classList.add('done'); el.querySelector('.step-icon').textContent = '✅'; }
+      }
+    }
+  });
+
+  const allDone = m.steps.every(s => state.stepsDone.includes(s.id));
+  if (allDone) {
+    document.getElementById('success-banner').classList.add('show');
+    document.getElementById('success-msg').textContent = m.success;
+    if (state.missionIndex < missions.length - 1) {
+      document.getElementById('next-btn').classList.add('show');
+    }
+  }
+}
+
+function nextMission() {
+  state.missionIndex++;
+  state.stepsDone = [];
+  document.getElementById('success-banner').classList.remove('show');
+  document.getElementById('next-btn').classList.remove('show');
+  renderMission();
+  print('', '');
+  print('info', `━━━ Missão ${state.missionIndex + 1}: ${missions[state.missionIndex].title} ━━━`);
+  print('warn', '👉 Veja o painel de missões para os próximos passos!');
+  print('', '');
+}
+
+// ─── TERMINAL ────────────────────────────────────────────────
+function print(type, text) {
+  const out = document.getElementById('output');
+  const line = document.createElement('div');
+  line.className = 'line';
+  if (!type) { line.innerHTML = `<span>&nbsp;</span>`; }
+  else { line.innerHTML = `<span class="out-${type}">${text}</span>`; }
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function printCmd(cmd) {
+  const out = document.getElementById('output');
+  const branch = state.currentBranch;
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.innerHTML = `<span class="prompt">natalia@pratica-qa (<span style="color:${branch==='main'?'var(--branch-main)':'var(--branch-feature)'}">${branch}</span>) $</span><span class="cmd"> ${cmd}</span>`;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+function updatePrompt() {
+  const b = state.currentBranch;
+  const color = b === 'main' ? 'var(--branch-main)' : 'var(--branch-feature)';
+  document.getElementById('prompt-text').innerHTML = `natalia@pratica-qa (<span style="color:${color}">${b}</span>) $`;
+}
+
+function updateSidebar() {
+  // branch list
+  const bl = document.getElementById('branch-list');
+  bl.innerHTML = '';
+  state.branches.forEach(b => {
+    const color = b === 'main' ? 'var(--branch-main)' : 'var(--branch-feature)';
+    bl.innerHTML += `<div class="branch-item ${b === state.currentBranch ? 'active' : ''}" data-branch="${b}">
+      <div class="branch-dot" style="background:${color}"></div>${b}</div>`;
+  });
+
+  // current branch indicator
+  document.getElementById('current-branch-name').textContent = state.currentBranch;
+  const dotColor = state.currentBranch === 'main' ? 'var(--branch-main)' : 'var(--branch-feature)';
+  document.getElementById('current-branch-dot').style.background = dotColor;
+
+  // commit list
+  const cl = document.getElementById('commit-list');
+  cl.innerHTML = '';
+  [...state.commits].reverse().forEach((c, i) => {
+    cl.innerHTML += `<div class="commit-item ${i===0?'latest':''}">
+      <div class="commit-msg">${c.msg}</div>
+      <div class="commit-meta"><span class="commit-hash">${c.hash}</span> · ${c.branch}</div>
+    </div>`;
+  });
+
+  // file tree
+  const ft = document.getElementById('file-tree');
+  ft.innerHTML = '<div class="repo-label" style="margin-bottom:8px">arquivos</div>';
+  Object.keys(state.files).forEach(f => {
+    const isModified = state.modifiedFiles.includes(f);
+    const isStaged = state.stagedFiles.includes(f);
+    ft.innerHTML += `<div class="file-item">
+      <span class="file-icon">📄</span> ${f}
+      ${isStaged ? '<span class="file-status status-staged">staged</span>' : isModified ? '<span class="file-status status-modified">modified</span>' : ''}
+    </div>`;
+  });
+
+  // graph
+  let graph = '';
+  state.branches.forEach((b, i) => {
+    const color = b === 'main' ? 'var(--branch-main)' : 'var(--branch-feature)';
+    const active = b === state.currentBranch ? ' ◄' : '';
+    if (i === 0) graph += `<span style="color:${color}">● ${b}${active}</span>`;
+    else graph += `<br><span style="color:var(--muted)">│</span><br><span style="color:${color}">└─● ${b}${active}</span>`;
+  });
+  document.getElementById('graph-lines').innerHTML = graph;
+
+  updatePrompt();
+}
+
+// ─── COMMAND PROCESSOR ───────────────────────────────────────
+function processCommand(cmd) {
+  const parts = cmd.trim().split(/\s+/);
+  const base = parts[0];
+  const sub = parts[1];
+
+  if (base !== 'git') {
+    if (base === 'clear' || base === 'cls') { document.getElementById('output').innerHTML = ''; return; }
+    if (base === 'help') { showHelp(); return; }
+    print('error', `Comando não reconhecido: "${base}". Tente comandos git ou "help".`);
+    return;
+  }
+
+  switch(sub) {
+    case 'status': cmdStatus(); break;
+    case 'log':    cmdLog(parts); break;
+    case 'branch': cmdBranch(parts); break;
+    case 'checkout': cmdCheckout(parts); break;
+    case 'add':    cmdAdd(parts); break;
+    case 'commit': cmdCommit(parts); break;
+    case 'diff':   cmdDiff(parts); break;
+    case 'pull':   cmdPull(); break;
+    case 'push':   cmdPush(); break;
+    case 'clone':  cmdClone(); break;
+    case 'merge':  cmdMerge(parts); break;
+    case 'stash':  cmdStash(); break;
+    default:
+      print('error', `git: "${sub}" não é um comando git reconhecido neste simulador.`);
+      print('muted', 'Comandos disponíveis: status, log, branch, checkout, add, commit, diff, pull, push, merge');
+  }
+}
+
+function cmdStatus() {
+  print('info',  `No ramo ${state.currentBranch}`);
+  if (state.commits.length <= 1 && state.currentBranch === 'main') {
+    print('muted', 'No commits yet');
+  } else {
+    print('success', 'nada a fazer no commit, árvore de trabalho limpa');
+  }
+  if (state.stagedFiles.length > 0) {
+    print('', '');
+    print('info', 'Mudanças a serem commitadas:');
+    state.stagedFiles.forEach(f => print('success', `\t modificado:   ${f}`));
+  }
+  if (state.modifiedFiles.filter(f => !state.stagedFiles.includes(f)).length > 0) {
+    print('', '');
+    print('warn', 'Mudanças não preparadas para commit:');
+    state.modifiedFiles.filter(f => !state.stagedFiles.includes(f))
+      .forEach(f => print('warn', `\t modificado:   ${f}`));
+  }
+}
+
+function cmdLog(parts) {
+  const oneline = parts.includes('--oneline');
+  print('', '');
+  [...state.commits].reverse().forEach(c => {
+    if (oneline) {
+      print('branch', `${c.hash} ${c.msg}`);
+    } else {
+      print('branch', `commit ${c.hash}xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`);
+      print('muted',  `Author: NataliaSevero <natalia@qa.dev>`);
+      print('muted',  `Branch: ${c.branch}`);
+      print('', '');
+      print('text',   `    ${c.msg}`);
+      print('', '');
+    }
+  });
+}
+
+function cmdBranch(parts) {
+  if (parts.length === 1) {
+    state.branches.forEach(b => {
+      if (b === state.currentBranch) print('success', `* ${b}`);
+      else print('muted', `  ${b}`);
+    });
+  } else if (parts[1] === '-d' || parts[1] === '-D') {
+    const name = parts[2];
+    if (!name) { print('error', 'Informe o nome da branch para deletar.'); return; }
+    if (name === 'main') { print('error', 'Não é possível deletar a branch main.'); return; }
+    if (name === state.currentBranch) { print('error', 'Não é possível deletar a branch atual. Troque para main primeiro.'); return; }
+    state.branches = state.branches.filter(b => b !== name);
+    print('warn', `Branch "${name}" deletada.`);
+    updateSidebar();
+  } else {
+    const name = parts[1];
+    if (state.branches.includes(name)) { print('error', `A branch "${name}" já existe.`); return; }
+    state.branches.push(name);
+    print('success', `Branch "${name}" criada.`);
+    print('muted', `Dica: use "git checkout ${name}" para trocar para ela.`);
+    updateSidebar();
+  }
+}
+
+function cmdCheckout(parts) {
+  const newBranch = parts.includes('-b');
+  const name = newBranch ? parts[3] || parts[2] : parts[2];
+
+  if (!name) { print('error', 'Informe o nome da branch.'); return; }
+
+  if (newBranch) {
+    if (state.branches.includes(name)) { print('error', `A branch "${name}" já existe. Use "git checkout ${name}".`); return; }
+    state.branches.push(name);
+    state.currentBranch = name;
+    print('success', `Trocou para a nova branch "${name}"`);
+  } else {
+    if (!state.branches.includes(name)) { print('error', `Branch "${name}" não existe.`); return; }
+    state.currentBranch = name;
+    print('success', `Trocou para a branch "${name}"`);
+  }
+
+  // add a mock modified file on feature branches
+  if (name !== 'main' && !state.modifiedFiles.includes('README.md')) {
+    state.modifiedFiles.push('README.md');
+  }
+
+  updateSidebar();
+}
+
+function cmdAdd(parts) {
+  const target = parts[2];
+  if (!target) { print('error', 'Informe o arquivo: git add <arquivo> ou git add .'); return; }
+
+  let added = [];
+  if (target === '.') {
+    added = state.modifiedFiles.filter(f => !state.stagedFiles.includes(f));
+    state.stagedFiles.push(...added);
+  } else {
+    if (!state.modifiedFiles.includes(target) && !Object.keys(state.files).includes(target)) {
+      print('error', `Arquivo "${target}" não encontrado.`); return;
+    }
+    if (!state.stagedFiles.includes(target)) {
+      state.stagedFiles.push(target);
+      added.push(target);
+    }
+  }
+
+  if (added.length === 0) { print('muted', 'Nenhuma mudança nova para adicionar.'); }
+  else { added.forEach(f => print('success', `adicionado: ${f}`)); }
+  updateSidebar();
+}
+
+function cmdCommit(parts) {
+  if (state.stagedFiles.length === 0 && !parts.includes('-m')) {
+    // allow empty commit with message for practice
+    if (!parts.includes('-m')) {
+      print('warn', 'Nada adicionado ao commit. Use "git add <arquivo>" primeiro.');
+      print('muted', 'Ou use: git commit -m "sua mensagem" para praticar.');
+    }
+  }
+
+  let msg = 'commit de prática';
+  const mIdx = parts.indexOf('-m');
+  if (mIdx !== -1) {
+    msg = parts.slice(mIdx + 1).join(' ').replace(/['"]/g, '');
+  }
+
+  const hash = Math.random().toString(36).substr(2, 7);
+  state.commits.push({ hash, msg, branch: state.currentBranch });
+  state.stagedFiles = [];
+  state.modifiedFiles = state.modifiedFiles.filter(f => !state.stagedFiles.includes(f));
+
+  print('success', `[${state.currentBranch} ${hash}] ${msg}`);
+  print('muted', `1 file changed`);
+  updateSidebar();
+}
+
+function cmdDiff(parts) {
+  print('muted', `diff --git a/README.md b/README.md`);
+  print('muted', `index a1b2c3..d4e5f6 100644`);
+  print('muted', `--- a/README.md`);
+  print('muted', `+++ b/README.md`);
+  print('muted', `@@ -1,3 +1,6 @@`);
+  print('muted', ` # pratica-qa`);
+  print('muted', ` Meu repositorio de pratica de QA`);
+  print('diff-add', `+`);
+  print('diff-add', `+## Casos de Teste`);
+  print('diff-add', `+- CT001: Verificar login com usuário válido`);
+  print('diff-add', `+- CT002: Verificar login com usuário inválido`);
+  if (state.currentBranch === 'main') {
+    print('', '');
+    print('muted', '(nenhuma diferença em relação ao main — troque para uma feature branch)');
+  }
+}
+
+function cmdPull() {
+  print('success', 'Already up to date.');
+  print('muted', 'Dica: no trabalho, git pull baixa as últimas alterações do servidor.');
+}
+
+function cmdPush() {
+  print('success', `Enumerating objects: 3, done.`);
+  print('success', `Writing objects: 100% (3/3), done.`);
+  print('success', `Branch "${state.currentBranch}" publicada com sucesso.`);
+  print('muted', 'Dica: git push envia seus commits para o repositório remoto (GitHub/GitLab).');
+}
+
+function cmdClone() {
+  print('success', `Cloning into 'pratica-qa'...`);
+  print('muted', `remote: Enumerating objects: 5, done.`);
+  print('success', `Receiving objects: 100% (5/5), done.`);
+  print('muted', 'Dica: no trabalho, use git clone <url> para baixar o repositório da empresa pela primeira vez.');
+}
+
+function cmdMerge(parts) {
+  const target = parts[2];
+  if (!target) { print('error', 'Informe a branch: git merge <branch>'); return; }
+  if (!state.branches.includes(target)) { print('error', `Branch "${target}" não existe.`); return; }
+  print('success', `Merge feito: ${target} → ${state.currentBranch}`);
+  print('muted', 'Dica: no trabalho, o merge geralmente é feito via Pull Request no GitHub/GitLab após aprovação do QA!');
+}
+
+function cmdStash() {
+  print('success', 'Saved working directory and index state WIP on ' + state.currentBranch);
+  print('muted', 'Dica: git stash "guarda" suas alterações temporariamente sem fazer commit.');
+}
+
+function showHelp() {
+  print('', '');
+  print('warn',    '── Comandos disponíveis ──────────────────');
+  print('info',    'git status         → ver estado do repositório');
+  print('info',    'git log            → ver histórico de commits');
+  print('info',    'git log --oneline  → histórico resumido');
+  print('info',    'git branch         → listar branches');
+  print('info',    'git checkout <b>   → trocar de branch');
+  print('info',    'git checkout -b <b>→ criar e trocar de branch');
+  print('info',    'git add <arquivo>  → preparar arquivo para commit');
+  print('info',    'git add .          → preparar todos os arquivos');
+  print('info',    'git commit -m "msg"→ fazer commit com mensagem');
+  print('info',    'git diff           → ver diferenças');
+  print('info',    'git push           → enviar para o servidor');
+  print('info',    'git pull           → baixar do servidor');
+  print('info',    'git merge <branch> → mesclar branches');
+  print('warn',    '──────────────────────────────────────────');
+  print('', '');
+}
+
+// ─── INPUT HANDLER ───────────────────────────────────────────
+const history = [];
+let historyIdx = -1;
+
+document.getElementById('terminal-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { runCommand(); }
+  if (e.key === 'ArrowUp') {
+    if (historyIdx < history.length - 1) historyIdx++;
+    this.value = history[history.length - 1 - historyIdx] || '';
+    e.preventDefault();
+  }
+  if (e.key === 'ArrowDown') {
+    if (historyIdx > 0) historyIdx--;
+    else { historyIdx = -1; this.value = ''; return; }
+    this.value = history[history.length - 1 - historyIdx] || '';
+    e.preventDefault();
+  }
+});
+
+function runCommand() {
+  const input = document.getElementById('terminal-input');
+  const cmd = input.value.trim();
+  if (!cmd) return;
+
+  history.push(cmd);
+  historyIdx = -1;
+  printCmd(cmd);
+  processCommand(cmd);
+  checkMissionStep(cmd);
+  print('', '');
+  input.value = '';
+  input.focus();
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+renderMission();
+updateSidebar();
+document.getElementById('terminal-input').focus();
+</script>
+</body>
+</html>
