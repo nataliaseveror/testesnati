@@ -1,0 +1,16 @@
+{
+  "formato": "9:16",
+  "pausa_minima": 0.35,
+  "folga": 0.08,
+  "legenda": {
+    "fonte": "Montserrat ExtraBold",
+    "tamanho": 0.055,
+    "cor": "#FFFFFF",
+    "cor_destaque": "#2BC4D8",
+    "contorno": "#000000",
+    "posicao": "meio",
+    "palavras_por_bloco": 2,
+    "maiusculas": true
+  },
+  "audio": { "normalizar": true, "musica": null, "volume_musica": 0.15 }
+}
