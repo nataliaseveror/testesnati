@@ -287,6 +287,11 @@ a.btnlink{display:inline-block;text-decoration:none;font:600 14px var(--font-bod
           <span class="hint">Vertical 9:16, horizontal 16:9 ou os dois.</span>
           <input type="text" id="p_formato"></label>
         <label class="f full" for="p_aberto">Abertura, encerramento e o que evitar<textarea id="p_aberto"></textarea></label>
+        <div class="full"><h3 style="margin-top:8px">Estilo dos posts estáticos</h3>
+          <p class="muted small" style="margin:4px 0 0">É o que o assistente segue nas artes de feed e carrossel deste perfil.</p></div>
+        <label class="f full" for="p_posts">Modelos e regras das artes
+          <span class="hint">Tipos de arte que você usa, onde vai o logo, como ficam títulos, fotos e cores.</span>
+          <textarea id="p_posts" style="min-height:160px"></textarea></label>
       </div>
       <div class="form-actions">
         <button type="submit" class="primary">Salvar perfil</button>
@@ -436,7 +441,7 @@ function renderProfTabs(){
   set("p_nome",p.nome);set("p_handle",p.handle);set("p_nicho",p.nicho);set("p_publico",p.publico);set("p_tom",p.tom);
   set("p_pilares",(p.pilares||[]).join("\n"));set("p_cores",p.cores);set("p_fontes",p.fontes);
   renderZernio(p);
-  set("p_exemplos",e.exemplos);set("p_legenda",e.legenda);set("p_ritmo",e.ritmo);set("p_musica",e.musica);set("p_formato",e.formato);set("p_aberto",e.abertura);
+  set("p_exemplos",e.exemplos);set("p_legenda",e.legenda);set("p_ritmo",e.ritmo);set("p_musica",e.musica);set("p_formato",e.formato);set("p_aberto",e.abertura);set("p_posts",e.posts);
 }
 
 function renderPerf(){
@@ -598,7 +603,7 @@ $("#profForm").addEventListener("submit",async e=>{
   try{
     await db.collection("perfis").doc(p.id).update({nome:v("p_nome"),handle:v("p_handle"),nicho:v("p_nicho"),publico:v("p_publico"),tom:v("p_tom"),
       pilares:v("p_pilares").split("\n").map(s=>s.trim()).filter(Boolean),cores:v("p_cores"),fontes:v("p_fontes"),
-      estilo:{exemplos:v("p_exemplos"),legenda:v("p_legenda"),ritmo:v("p_ritmo"),musica:v("p_musica"),formato:v("p_formato"),abertura:v("p_aberto")},
+      estilo:{exemplos:v("p_exemplos"),legenda:v("p_legenda"),ritmo:v("p_ritmo"),musica:v("p_musica"),formato:v("p_formato"),abertura:v("p_aberto"),posts:v("p_posts")},
       atualizadoEm:new Date().toISOString()});
     $("#profMsg").textContent="";toast("Perfil salvo");
   }catch(err){$("#profMsg").textContent="Não consegui salvar: "+(err.message||err.code);}
