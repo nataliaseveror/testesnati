@@ -624,7 +624,7 @@ function zErr(e){
   if(e&&e.code==="rate_limited")return"Muitas tentativas seguidas. Espere um pouco e tente de novo.";
   return"A Zernio não respondeu como esperado"+(m?": "+m.slice(0,200):".");
 }
-function zMsg(text,err){$("#zArea").replaceChildren(el("div",{class:"zmsg"+(err?" err":"")},text));}
+function zMsg(text,err){const box=el("div",{class:"zmsg"+(err?" err":"")},text);if(/plano da Zernio/.test(text))box.append(" ",el("a",{href:"https://zernio.com/dashboard/billing?add_payment_method=1",target:"_blank",rel:"noopener"},"Adicionar forma de pagamento"));$("#zArea").replaceChildren(box);}
 function renderZernio(p){
   if(zFor!==p.id){zFor=p.id;$("#zArea").replaceChildren();}
   const st=$("#zStatus");
