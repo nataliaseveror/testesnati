@@ -20,6 +20,7 @@ Sistema para gerenciar 4 canais com um assistente de IA:
 
 - `perfis/{criacao|beleza|estofados|youtube}`: nome, handle, nicho, publico, tom, pilares[], cores, fontes, zernioId, estilo{exemplos, legenda, ritmo, musica, formato, abertura}
 - `pedidos/{id}`: perfilId, tipo (reel|carrossel|post|stories|youtube|roteiro|plano), titulo, ideia, tom, cta, dataPostagem, linkBruto, referencias, arquivos[{id,nome,tipo}], status, conversa[{de,texto,em}], entrega{resumo, roteiro, legenda, hashtags, links[{nome,url}]}
+- `ideias/{id}`: perfilId, tipo, titulo, ideia, origem (gerada|minha), usada, criadoEm. Banco de ideias: ao pedir ideias, salvar aqui as que a Nati quiser guardar.
 - `metricas/{perfilId}`: seguidores, alcance30d, engajamento, insights, topPosts[{titulo,tipo,alcance,link}], atualizadoEm
 
 Status: `fila` → `produzindo` → `revisar` → (`ajustes` → `produzindo` …) → `aprovado` → `publicado`.

@@ -124,6 +124,16 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .zmsg{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
 .zmsg.err{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
 a.btnlink{display:inline-block;text-decoration:none;font:600 14px var(--font-body);border-radius:10px;padding:9px 14px;background:var(--accent);color:var(--accent-fg)}
+.g-ideas{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.icard{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--pc,var(--accent));border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.icard.used{opacity:.6}
+.icard .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.icard p{margin:0;font-size:14px;white-space:pre-wrap;word-break:break-word}
+.icard .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.icard .acts button{padding:6px 10px;font-size:13px}
+.idea{display:flex;flex-direction:column;gap:6px;cursor:default}
+.idea .acts{display:flex;gap:6px;flex-wrap:wrap}
+.idea .acts button{padding:6px 10px;font-size:13px}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
 </style>
 
@@ -141,6 +151,7 @@ a.btnlink{display:inline-block;text-decoration:none;font:600 14px var(--font-bod
     <button role="tab" data-tab="novo" aria-selected="false">Novo pedido</button>
     <button role="tab" data-tab="producao" aria-selected="false">Produção</button>
     <button role="tab" data-tab="revisar" aria-selected="false">Para revisar<span class="count" id="revCount" hidden>0</span></button>
+    <button role="tab" data-tab="ideias" aria-selected="false">Banco de ideias<span class="count" id="ideaCount" hidden style="background:var(--surface-2);color:var(--muted)">0</span></button>
     <button role="tab" data-tab="perfis" aria-selected="false">Perfis e estilo</button>
     <button role="tab" data-tab="desempenho" aria-selected="false">Desempenho</button>
   </nav>
@@ -234,6 +245,22 @@ a.btnlink{display:inline-block;text-decoration:none;font:600 14px var(--font-bod
   <!-- REVISAR -->
   <section data-view="revisar" hidden>
     <div class="list" id="reviewList"></div>
+  </section>
+
+  <!-- BANCO DE IDEIAS -->
+  <section data-view="ideias" hidden>
+    <form id="ideaForm" class="panel" novalidate style="margin-bottom:18px">
+      <h2 style="margin-bottom:10px">Anotar uma ideia</h2>
+      <div class="fields">
+        <div class="full"><div class="chips" id="ideaProfiles"></div></div>
+        <label class="f" for="i_titulo">Título<input type="text" id="i_titulo" placeholder="Ex.: o que o xixi de gato faz no sofá"></label>
+        <label class="f" for="i_tipo">Formato<select id="i_tipo"></select></label>
+        <label class="f full" for="i_ideia">Ideia<textarea id="i_ideia" placeholder="Escreva do jeito que veio na cabeça"></textarea></label>
+      </div>
+      <div class="form-actions"><button type="submit" class="primary">Guardar ideia</button><span class="muted small" id="ideaMsg"></span></div>
+    </form>
+    <div class="filters" id="ideaFilters"></div>
+    <div class="grid g-ideas" id="ideaList"></div>
   </section>
 
   <!-- PERFIS -->
@@ -331,7 +358,7 @@ const STATUS=[
 const statusLabel=id=>(STATUS.find(s=>s.id===id)||{label:id}).label;
 const typeLabel=id=>(TYPES.find(t=>t.id===id)||{label:id}).label;
 
-const state={profiles:[],orders:[],metrics:{},tab:"inicio",orderProfile:null,orderType:"reel",editProfile:null,boardFilter:"todos",pendingFiles:[]};
+const state={profiles:[],orders:[],metrics:{},tab:"inicio",orderProfile:null,orderType:"reel",editProfile:null,boardFilter:"todos",pendingFiles:[],ideas:[],ideaProfile:null,ideaFilter:"todos",showUsed:false,ideaInUse:null};
 let db=null, assets=null, sample=null;
 
 const $=s=>document.querySelector(s);
@@ -355,7 +382,7 @@ document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.cl
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(document.querySelector(`[data-view="${h}"]`))setTab(h);});
 
 /* ---------- Render ---------- */
-function render(){renderProfCards();renderHome();renderOrderForm();renderBoard();renderReview();renderProfTabs();renderPerf();
+function render(){renderProfCards();renderHome();renderOrderForm();renderBoard();renderReview();renderProfTabs();renderPerf();renderIdeas();
   const n=state.orders.filter(o=>o.status==="revisar").length;const c=$("#revCount");c.hidden=!n;c.textContent=n;}
 
 function emptyBox(msg){return el("div",{class:"empty"},msg);}
@@ -562,6 +589,7 @@ $("#orderForm").addEventListener("submit",async e=>{
       referencias:$("#o_refs").value.trim(),arquivos,
       status:"fila",conversa:[],entrega:{},criadoEm:now,atualizadoEm:now});
     for(const id of["o_ideia","o_titulo","o_tom","o_cta","o_data","o_bruto","o_refs","o_files"])$("#"+id).value="";
+    if(state.ideaInUse){db.collection("ideias").doc(state.ideaInUse).update({usada:true}).catch(()=>{});state.ideaInUse=null;}
     state.pendingFiles=[];$("#ideas").replaceChildren();renderOrderForm();
     msg.textContent="";toast("Pedido enviado para a fila");setTab("producao");
   }catch(err){msg.textContent="Não consegui enviar: "+(err.message||err.code||err);}
@@ -587,13 +615,68 @@ Responda só com JSON: [{"titulo":"até 8 palavras","ideia":"2 frases dizendo o 
   try{
     const r=await sample.json(prompt,{modelTier:"quick"});
     const list=Array.isArray(r)?r:(r&&r.ideias)||[];
-    box.replaceChildren(...list.slice(0,5).map(i=>el("button",{type:"button",class:"idea",onclick:()=>{$("#o_ideia").value=i.ideia||"";$("#o_titulo").value=i.titulo||"";toast("Ideia copiada para o pedido");}},String(i.titulo||""),el("small",{},String(i.ideia||"")))));
+    const perfilId=p.id, tipo=state.orderType;
+    const items=list.slice(0,5).map(i=>{
+      const titulo=String(i.titulo||""), ideia=String(i.ideia||"");
+      const save=el("button",{type:"button",onclick:async()=>{if(await saveIdea({perfilId,tipo,titulo,ideia,origem:"gerada"})){save.disabled=true;save.textContent="Salva no banco";}}},"Salvar no banco");
+      return {titulo,ideia,save,node:el("div",{class:"idea"},el("b",{},titulo),el("small",{},ideia),
+        el("div",{class:"acts"},el("button",{type:"button",class:"primary",onclick:()=>{$("#o_ideia").value=ideia;$("#o_titulo").value=titulo;toast("Ideia copiada para o pedido");}},"Usar agora"),save))};
+    });
+    const saveAll=el("button",{type:"button",class:"ghost",onclick:async()=>{let n=0;for(const it of items){if(!it.save.disabled&&await saveIdea({perfilId,tipo,titulo:it.titulo,ideia:it.ideia,origem:"gerada"},true)){it.save.disabled=true;it.save.textContent="Salva no banco";n++;}}saveAll.disabled=true;toast(n+" ideias salvas no banco");}},"Salvar todas no banco");
+    box.replaceChildren(...items.map(i=>i.node),el("div",{},saveAll));
     if(!list.length)box.replaceChildren(el("p",{class:"muted small"},"Não veio nenhuma ideia. Tente de novo."));
   }catch(e){
     const hide=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code);
     box.replaceChildren(el("p",{class:"muted small"},hide?"Gerar ideias não está liberado para esta página.":e.code==="rate_limited"?"Muitos pedidos seguidos. Tente daqui a pouco.":"Não deu certo agora. Tente de novo."));
     if(hide)$("#btnIdeas").hidden=true;
   }
+});
+
+/* ---------- Banco de ideias ---------- */
+async function saveIdea(d,quiet){
+  if(!db){toast("Sem conexão com o banco.");return false;}
+  try{await db.collection("ideias").add({perfilId:d.perfilId,tipo:d.tipo||"reel",titulo:d.titulo||d.ideia.slice(0,60),ideia:d.ideia||"",origem:d.origem||"minha",usada:false,criadoEm:new Date().toISOString()});
+    if(!quiet)toast("Ideia salva no banco");return true;}
+  catch(e){toast("Não consegui salvar: "+(e.message||e.code));return false;}
+}
+function renderIdeas(){
+  const n=state.ideas.filter(i=>!i.usada).length;const c=$("#ideaCount");c.hidden=!n;c.textContent=n;
+  if(!state.ideaProfile&&state.profiles[0])state.ideaProfile=state.profiles[0].id;
+  const pc=$("#ideaProfiles");pc.replaceChildren(...state.profiles.map(p=>el("button",{type:"button",class:"chip",style:`--pc:${profColor(p)}`,"aria-pressed":String(state.ideaProfile===p.id),onclick:()=>{state.ideaProfile=p.id;renderIdeas();}},el("span",{class:"dot"}),p.nome)));
+  const sel=$("#i_tipo");if(!sel.options.length)for(const t of TYPES)sel.append(el("option",{value:t.id},t.label));
+  const f=$("#ideaFilters");f.replaceChildren();
+  const opts=[{id:"todos",nome:"Todas"},...state.profiles];
+  for(const p of opts)f.append(el("button",{type:"button",class:"chip",style:p.cor?`--pc:${profColor(p)}`:null,"aria-pressed":String(state.ideaFilter===p.id),onclick:()=>{state.ideaFilter=p.id;renderIdeas();}},p.cor?el("span",{class:"dot"}):null,p.nome));
+  f.append(el("button",{type:"button",class:"chip","aria-pressed":String(state.showUsed),onclick:()=>{state.showUsed=!state.showUsed;renderIdeas();}},"Mostrar as já usadas"));
+  const list=state.ideas.filter(i=>(state.ideaFilter==="todos"||i.perfilId===state.ideaFilter)&&(state.showUsed||!i.usada));
+  const box=$("#ideaList");
+  if(!list.length){box.replaceChildren(emptyBox(state.ideas.length?"Nenhuma ideia neste filtro.":"Seu banco está vazio. Gere ideias em “Novo pedido” e clique em “Salvar no banco”, ou anote uma ideia aqui em cima."));return;}
+  box.replaceChildren(...list.map(i=>{
+    const p=profById(i.perfilId);
+    const acts=el("div",{class:"acts"});
+    const reset=()=>acts.replaceChildren(
+      el("button",{type:"button",class:"primary",onclick:()=>ideaToOrder(i)},"Virar pedido"),
+      el("button",{type:"button",onclick:()=>db.collection("ideias").doc(i.id).update({usada:!i.usada}).catch(e=>toast("Não consegui salvar: "+(e.message||e.code)))},i.usada?"Voltar para o banco":"Marcar como usada"),
+      el("button",{type:"button",class:"ghost",onclick:()=>acts.replaceChildren(el("span",{class:"small"},"Excluir?"),
+        el("button",{type:"button",onclick:()=>db.collection("ideias").doc(i.id).delete().then(()=>toast("Ideia excluída")).catch(e=>toast("Não consegui excluir: "+(e.message||e.code)))},"Sim"),
+        el("button",{type:"button",class:"ghost",onclick:reset},"Não"))},"Excluir"));
+    reset();
+    return el("div",{class:"icard"+(i.usada?" used":""),style:`--pc:${profColor(p)}`},
+      el("div",{class:"meta"},el("span",{class:"dot"}),el("span",{},p?p.nome:""),el("span",{class:"pill"},typeLabel(i.tipo)),i.origem==="gerada"?el("span",{class:"pill"},"gerada"):null,i.usada?el("span",{class:"pill on"},"usada"):null),
+      el("h3",{},i.titulo||"Sem título"),el("p",{},i.ideia||""),
+      el("div",{class:"meta"},"Guardada em "+fmtDate(i.criadoEm)),acts);
+  }));
+}
+function ideaToOrder(i){
+  state.orderProfile=i.perfilId;state.orderType=i.tipo||"reel";state.ideaInUse=i.id;
+  $("#o_titulo").value=i.titulo||"";$("#o_ideia").value=i.ideia||"";
+  setTab("novo");renderOrderForm();toast("Ideia levada para o pedido");
+}
+$("#ideaForm").addEventListener("submit",async e=>{
+  e.preventDefault();const ideia=$("#i_ideia").value.trim();
+  if(!ideia){$("#ideaMsg").textContent="Escreva a ideia.";$("#i_ideia").focus();return;}
+  if(!state.ideaProfile){$("#ideaMsg").textContent="Escolha o perfil.";return;}
+  if(await saveIdea({perfilId:state.ideaProfile,tipo:$("#i_tipo").value,titulo:$("#i_titulo").value.trim(),ideia,origem:"minha"})){$("#i_ideia").value="";$("#i_titulo").value="";$("#ideaMsg").textContent="";}
 });
 
 /* ---------- Salvar perfil ---------- */
@@ -709,6 +792,7 @@ async function boot(){
   const err=e=>{$("#conn").textContent="Erro ao ler dados: "+(e.message||e.code);};
   db.collection("perfis").orderBy("ordem").onSnapshot(s=>{state.profiles=s.docs.map(d=>({id:d.id,...d.data()}));render();},err);
   db.collection("pedidos").orderBy("criadoEm","desc").onSnapshot(s=>{state.orders=s.docs.map(d=>({id:d.id,...d.data()}));render();if(openId)drawOrder();},err);
+  db.collection("ideias").orderBy("criadoEm","desc").onSnapshot(s=>{state.ideas=s.docs.map(d=>({id:d.id,...d.data()}));render();},err);
   db.collection("metricas").onSnapshot(s=>{const m={};s.docs.forEach(d=>m[d.id]=d.data());state.metrics=m;render();},err);
 }
 boot();
