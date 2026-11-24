@@ -118,6 +118,12 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:18px}
 .how div{padding:14px;border-radius:12px;background:var(--surface-2);font-size:14px}
 .how b{display:block;font-family:var(--font-display);font-size:16px;margin-bottom:4px}
+.zbox{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.zhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill.on{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.zmsg{font-size:14px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
+.zmsg.err{color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent)}
+a.btnlink{display:inline-block;text-decoration:none;font:600 14px var(--font-body);border-radius:10px;padding:9px 14px;background:var(--accent);color:var(--accent-fg)}
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
 </style>
 
@@ -237,6 +243,16 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
       <div class="fields">
         <label class="f" for="p_nome">Nome do perfil<input type="text" id="p_nome"></label>
         <label class="f" for="p_handle">@ ou canal<input type="text" id="p_handle"></label>
+        <div class="full zbox" id="zernioBox">
+          <div class="zhead"><h3>Conexão com a Zernio</h3><span class="pill" id="zStatus">Não conectado</span></div>
+          <p class="muted small" id="zHelp" style="margin:0">É por essa conexão que o assistente agenda os posts e lê os números deste perfil.</p>
+          <div class="form-actions" style="margin-top:4px" id="zActions">
+            <button type="button" id="zConnect" class="primary">Conectar conta</button>
+            <button type="button" id="zPick">Escolher conta já conectada</button>
+            <button type="button" id="zUnlink" class="ghost" hidden>Desligar deste perfil</button>
+          </div>
+          <div id="zArea" class="list"></div>
+        </div>
         <label class="f full" for="p_nicho">Sobre o negócio
           <span class="hint">O que você faz, onde atende, o que diferencia.</span>
           <textarea id="p_nicho"></textarea></label>
@@ -419,6 +435,7 @@ function renderProfTabs(){
   const set=(id,v)=>{const n=$("#"+id);if(document.activeElement!==n)n.value=v||"";};
   set("p_nome",p.nome);set("p_handle",p.handle);set("p_nicho",p.nicho);set("p_publico",p.publico);set("p_tom",p.tom);
   set("p_pilares",(p.pilares||[]).join("\n"));set("p_cores",p.cores);set("p_fontes",p.fontes);
+  renderZernio(p);
   set("p_exemplos",e.exemplos);set("p_legenda",e.legenda);set("p_ritmo",e.ritmo);set("p_musica",e.musica);set("p_formato",e.formato);set("p_aberto",e.abertura);
 }
 
@@ -587,6 +604,90 @@ $("#profForm").addEventListener("submit",async e=>{
   }catch(err){$("#profMsg").textContent="Não consegui salvar: "+(err.message||err.code);}
 });
 
+/* ---------- Zernio ---------- */
+let mcp=null, zAccounts=null, zFor=null;
+const ZERNIO="Zernio";
+const zPlatform=p=>p.plataforma==="youtube"?"youtube":"instagram";
+const zName=p=>zPlatform(p)==="youtube"?"YouTube":"Instagram";
+function zText(res){
+  const parts=(res&&res.content||[]).filter(c=>c.type==="text").map(c=>c.text);
+  let t=parts.join("\n");
+  if(!t&&res&&res.payload!=null)t=typeof res.payload==="string"?res.payload:JSON.stringify(res.payload);
+  try{const j=JSON.parse(t);if(j&&typeof j.result==="string")t=j.result;else if(j&&typeof j==="object")t=JSON.stringify(j);}catch(e){}
+  return t||"";
+}
+function zErr(e){
+  const m=String((e&&(e.message||(e.result&&zText(e.result))))||"");
+  if(/PAYMENT_REQUIRED|more than 2 accounts/i.test(m))return"Seu plano da Zernio permite só 2 contas, e elas já estão em uso. Para ligar mais um perfil, adicione uma forma de pagamento no site da Zernio e tente de novo.";
+  if(e&&(e.code==="not_granted"||e.code==="consent_required"))return"Você precisa permitir que o painel use a Zernio. Clique de novo e aceite o pedido de permissão.";
+  if(e&&(e.code==="server_not_connected"||e.code==="needs_reauth"))return"A Zernio não está conectada à sua conta do Claude. Conecte em Configurações → Conectores e tente de novo.";
+  if(e&&e.code==="rate_limited")return"Muitas tentativas seguidas. Espere um pouco e tente de novo.";
+  return"A Zernio não respondeu como esperado"+(m?": "+m.slice(0,200):".");
+}
+function zMsg(text,err){$("#zArea").replaceChildren(el("div",{class:"zmsg"+(err?" err":"")},text));}
+function renderZernio(p){
+  if(zFor!==p.id){zFor=p.id;$("#zArea").replaceChildren();}
+  const st=$("#zStatus");
+  if(p.zernioId){st.textContent="Ligado"+(p.zernioUser?" a @"+p.zernioUser:"");st.className="pill on";}
+  else{st.textContent="Não conectado";st.className="pill";}
+  $("#zUnlink").hidden=!p.zernioId;
+  $("#zConnect").textContent=p.zernioId?"Reconectar "+zName(p):"Conectar "+zName(p);
+  const off=!mcp;
+  $("#zConnect").disabled=off;$("#zPick").disabled=off;
+  if(off)$("#zHelp").textContent="Para conectar daqui, abra o painel no claude.ai com a Zernio ligada em Conectores.";
+}
+async function zListAccounts(){
+  const res=await mcp.callTool(ZERNIO,"accounts_list",{},{cache:false});
+  const t=zText(res);const out=[];
+  for(const m of t.matchAll(/-\s*([a-z]+):\s*(.+?)\s*\(ID:\s*([A-Za-z0-9]+)\)/g))out.push({plataforma:m[1],usuario:m[2].trim(),id:m[3]});
+  zAccounts=out;return out;
+}
+async function zLink(p,acc){
+  try{await db.collection("perfis").doc(p.id).update({zernioId:acc.id,zernioUser:acc.usuario,handle:p.handle||"@"+acc.usuario,atualizadoEm:new Date().toISOString()});
+    zMsg("Pronto: "+p.nome+" está ligado a @"+acc.usuario+".");toast("Conta ligada");}
+  catch(e){zMsg("Não consegui salvar: "+(e.message||e.code),true);}
+}
+async function zShowPicker(p,auto){
+  zMsg("Buscando suas contas na Zernio…");
+  try{
+    const list=(await zListAccounts()).filter(a=>a.plataforma===zPlatform(p));
+    if(!list.length){zMsg("Nenhuma conta de "+zName(p)+" conectada na Zernio ainda. Use “Conectar "+zName(p)+"”.");return;}
+    const usadas=new Set(state.profiles.filter(x=>x.id!==p.id&&x.zernioId).map(x=>x.zernioId));
+    if(auto){const nova=list.find(a=>!usadas.has(a.id)&&a.id!==p.zernioId);if(nova){await zLink(p,nova);return;}}
+    $("#zArea").replaceChildren(el("p",{class:"muted small",style:"margin:4px 0 0"},"Escolha a conta deste perfil:"),
+      ...list.map(a=>el("button",{type:"button",class:"row",disabled:usadas.has(a.id)?"":null,onclick:()=>zLink(p,a)},
+        el("span",{class:"t"},"@"+a.usuario),
+        el("span",{class:"pill"+(a.id===p.zernioId?" on":"")},a.id===p.zernioId?"ligada aqui":usadas.has(a.id)?"usada em outro perfil":"ligar"))));
+  }catch(e){zMsg(zErr(e),true);}
+}
+$("#zPick").addEventListener("click",()=>{const p=profById(state.editProfile);if(p&&mcp)zShowPicker(p,false);});
+$("#zUnlink").addEventListener("click",async()=>{const p=profById(state.editProfile);if(!p)return;
+  try{await db.collection("perfis").doc(p.id).update({zernioId:"",zernioUser:""});zMsg("Conta desligada deste perfil. Ela continua na Zernio.");}catch(e){zMsg("Não consegui salvar: "+(e.message||e.code),true);}});
+$("#zConnect").addEventListener("click",async()=>{
+  const p=profById(state.editProfile);if(!p||!mcp)return;
+  const btn=$("#zConnect");btn.disabled=true;zMsg("Preparando o login do "+zName(p)+"…");
+  try{
+    const prof=zText(await mcp.callTool(ZERNIO,"profiles_list",{},{cache:false}));
+    const pid=(prof.match(/\(ID:\s*([A-Za-z0-9]+)\)/)||[])[1];
+    if(!pid){zMsg("Não achei o seu perfil na Zernio.",true);return;}
+    const args={platform:zPlatform(p),profile_id:pid};
+    if(p.zernioId)args.reconnect_account_id=p.zernioId;
+    if(zPlatform(p)==="instagram")args.force_reauth=true;
+    const res=await mcp.callTool(ZERNIO,"call_tool",{name:"connect_get_connect_url",arguments:args},{cache:false});
+    const t=zText(res);
+    if(/PAYMENT_REQUIRED|more than 2 accounts|\[4\d\d\]/i.test(t)){zMsg(zErr({message:t}),true);return;}
+    const url=(t.match(/https:\/\/[^\s"'<>\\)]+/)||[])[0];
+    if(!url){zMsg("A Zernio não devolveu o link de login. "+t.slice(0,200),true);return;}
+    $("#zArea").replaceChildren(
+      el("div",{class:"zmsg"},"1. Abra o login e entre com a conta "+(p.handle||"deste perfil")+". ",
+        zPlatform(p)==="instagram"?"Se o Instagram já abrir logado em outra conta, troque de conta antes de autorizar.":""),
+      el("div",{},el("a",{class:"btnlink",href:url,target:"_blank",rel:"noopener"},"Abrir login do "+zName(p))),
+      el("div",{class:"zmsg"},"2. Depois de autorizar, volte aqui e clique em:"),
+      el("div",{},el("button",{type:"button",onclick:()=>zShowPicker(p,true)},"Já conectei, ligar a este perfil")));
+  }catch(e){zMsg(zErr(e),true);}
+  finally{btn.disabled=false;}
+});
+
 /* ---------- Conexão ---------- */
 async function boot(){
   try{const t=localStorage.getItem("estudio-tab");const h=location.hash.slice(1);setTab(document.querySelector(`[data-view="${h}"]`)?h:(t||"inicio"));}catch(e){setTab("inicio");}
@@ -599,6 +700,7 @@ async function boot(){
   $("#conn").textContent="Conectado";
   window.claude.use("assets").then(a=>{assets=a;if(!a)$("#o_files").closest("label").hidden=true;});
   window.claude.use("sample").then(s=>{sample=s;if(!s)$("#btnIdeas").hidden=true;});
+  window.claude.use("mcp").then(m=>{mcp=m;renderProfTabs();});
   const err=e=>{$("#conn").textContent="Erro ao ler dados: "+(e.message||e.code);};
   db.collection("perfis").orderBy("ordem").onSnapshot(s=>{state.profiles=s.docs.map(d=>({id:d.id,...d.data()}));render();},err);
   db.collection("pedidos").orderBy("criadoEm","desc").onSnapshot(s=>{state.orders=s.docs.map(d=>({id:d.id,...d.data()}));render();if(openId)drawOrder();},err);
