@@ -29,7 +29,7 @@ Status: `fila` → `produzindo` → `revisar` → (`ajustes` → `produzindo` �
 1. Ler `pedidos` com status `fila` ou `ajustes` (ArtifactData `query`). Ler o perfil de cada um.
 2. Marcar `produzindo`.
 3. Produzir conforme o tipo:
-   - **Reel / YouTube**: baixar o bruto do `linkBruto`, gerar o estilo do perfil em JSON a partir de `perfil.estilo`, rodar `editor/editar.py`, subir o resultado no Drive (pasta *Editados*) e colocar o link em `entrega.links`. Escrever roteiro, título e legenda.
+   - **Reel / YouTube**: pegar o arquivo `linkBruto` na pasta `Estúdio Nati/Brutos` do computador da Nati (conectado por Remote Control), gerar o estilo do perfil em JSON a partir de `perfil.estilo`, rodar `editor/editar.py` lá, salvar o resultado em `Estúdio Nati/Editados` e colocar o link em `entrega.links`. Escrever roteiro, título e legenda.
    - **Carrossel / Post**: texto de cada lâmina e arte no Canva com as cores e fontes do perfil; link do Canva em `entrega.links`.
    - **Roteiro**: gancho (3s), desenvolvimento, chamada para ação.
    - **Plano do mês**: calendário com dia, formato, tema e gancho, usando `metricas.insights`.
