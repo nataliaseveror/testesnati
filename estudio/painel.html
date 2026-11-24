@@ -1,0 +1,609 @@
+<title>Estúdio Nati</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: barra de perfis no topo + abas; cada perfil tem sua cor, a fila de produção é um quadro por etapa */
+:root{
+  --bg:#f5f1f2; --surface:#ffffff; --surface-2:#efe8ea; --line:#e2d8db;
+  --fg:#1f191c; --muted:#6e6268; --accent:#d9365f; --accent-fg:#ffffff;
+  --c-criacao:#d9365f; --c-beleza:#b0538f; --c-estofados:#1f8a86; --c-youtube:#e0452b;
+  --ok:#2f8a4c; --warn:#b7791f; --info:#3a6fb0;
+  --font-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body:Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#171215; --surface:#211a1e; --surface-2:#2a2126; --line:#3a2f35;
+  --fg:#f3ecef; --muted:#b3a5ac; --accent:#ff5c84; --accent-fg:#1a0e13;
+  --c-criacao:#ff5c84; --c-beleza:#d77cb6; --c-estofados:#3cbcb6; --c-youtube:#ff6a4d;
+  --ok:#5cc27d; --warn:#e0a548; --info:#78a6e0; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#171215; --surface:#211a1e; --surface-2:#2a2126; --line:#3a2f35;
+  --fg:#f3ecef; --muted:#b3a5ac; --accent:#ff5c84; --accent-fg:#1a0e13;
+  --c-criacao:#ff5c84; --c-beleza:#d77cb6; --c-estofados:#3cbcb6; --c-youtube:#ff6a4d;
+  --ok:#5cc27d; --warn:#e0a548; --info:#78a6e0; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+header.top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+header.top p{margin:4px 0 0}
+.status-line{font-size:13px;color:var(--muted)}
+nav.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+nav.tabs button{flex:none;border:0;background:none;color:var(--muted);font:600 15px var(--font-body);padding:10px 14px;border-bottom:3px solid transparent;cursor:pointer}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs .count{display:inline-block;min-width:20px;padding:0 6px;margin-left:6px;border-radius:99px;background:var(--accent);color:var(--accent-fg);font-size:12px;line-height:20px;text-align:center}
+button,.btn{font:600 14px var(--font-body);border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.ghost{background:transparent}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid{display:grid;gap:14px}
+.g-profiles{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.prof{border-radius:var(--r);background:var(--surface);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.prof .tag{display:inline-flex;align-items:center;gap:8px;font-weight:600}
+.dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--pc,var(--accent))}
+.prof .stats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.prof .stats b{color:var(--fg);font-variant-numeric:tabular-nums;font-size:18px;display:block;font-family:var(--font-display)}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.s-fila{color:var(--muted)}
+.pill.s-produzindo{color:var(--info);background:color-mix(in srgb,var(--info) 14%,transparent)}
+.pill.s-revisar{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
+.pill.s-ajustes{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.pill.s-aprovado,.pill.s-publicado{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.overview{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:18px}
+@media (max-width:860px){.overview{grid-template-columns:1fr}}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);cursor:pointer;border:1px solid transparent;text-align:left;width:100%;font-weight:500}
+.row:hover{border-color:var(--line)}
+.row .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+/* Formulário */
+form .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:700px){form .fields{grid-template-columns:1fr}}
+.full{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:14px}
+label.f span.hint{font-weight:400;color:var(--muted);font-size:12.5px}
+input[type=text],input[type=url],input[type=date],input[type=number],select,textarea{font:400 15px var(--font-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+textarea{min-height:96px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 13px;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.chip[aria-pressed="true"]{border-color:var(--pc,var(--accent));background:color-mix(in srgb,var(--pc,var(--accent)) 14%,var(--surface));}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+.ideas{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.idea{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;text-align:left;font-weight:500}
+.idea small{display:block;color:var(--muted);font-weight:400}
+.files-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.files-list .pill{background:var(--surface-2)}
+/* Quadro */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;padding-bottom:10px}
+.col{background:var(--surface-2);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:160px}
+.col h3{font-size:14px;display:flex;justify-content:space-between;padding:4px 4px 6px}
+.card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pc,var(--accent));border-radius:10px;padding:10px 12px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;font-weight:500;width:100%}
+.card .meta{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:400}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+/* Gaveta de detalhe */
+.drawer-bg{position:fixed;inset:0;background:rgba(10,6,8,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(640px,100%);background:var(--surface);z-index:21;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 20px) max(20px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 30px) 20px;display:flex;flex-direction:column;gap:16px;box-shadow:-10px 0 40px rgba(0,0,0,.18)}
+.drawer .head{display:flex;justify-content:space-between;gap:12px;align-items:start}
+.block{border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.block h4{margin:0;font:700 13px var(--font-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.pre{white-space:pre-wrap;word-break:break-word}
+.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:4px 12px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;word-break:break-word}
+a{color:var(--accent)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumbs img,.thumbs video{width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:var(--surface-2)}
+.thread{display:flex;flex-direction:column;gap:6px}
+.msg{padding:8px 10px;border-radius:10px;background:var(--surface-2);font-size:14px}
+.msg small{color:var(--muted);display:block}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 20px);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:40}
+/* Desempenho */
+.perf{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi b{display:block;font:800 22px var(--font-display);font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:6px 4px;border-bottom:1px solid var(--line)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:18px}
+.how div{padding:14px;border-radius:12px;background:var(--surface-2);font-size:14px}
+.how b{display:block;font-family:var(--font-display);font-size:16px;margin-bottom:4px}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slide .18s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Estúdio Nati</h1>
+      <p class="muted">Peça o conteúdo, o assistente produz e você aprova antes de postar.</p>
+    </div>
+    <div class="status-line" id="conn">Conectando…</div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="inicio" aria-selected="true">Início</button>
+    <button role="tab" data-tab="novo" aria-selected="false">Novo pedido</button>
+    <button role="tab" data-tab="producao" aria-selected="false">Produção</button>
+    <button role="tab" data-tab="revisar" aria-selected="false">Para revisar<span class="count" id="revCount" hidden>0</span></button>
+    <button role="tab" data-tab="perfis" aria-selected="false">Perfis e estilo</button>
+    <button role="tab" data-tab="desempenho" aria-selected="false">Desempenho</button>
+  </nav>
+
+  <!-- INÍCIO -->
+  <section data-view="inicio">
+    <div class="grid g-profiles" id="profCards"></div>
+    <div class="overview" style="margin-top:18px">
+      <div class="panel">
+        <h2>Esperando você</h2>
+        <p class="muted small">Conteúdos prontos para você aprovar ou pedir ajuste.</p>
+        <div class="list" id="homeReview"></div>
+      </div>
+      <div class="panel">
+        <h2>Em produção</h2>
+        <p class="muted small">O que o assistente está fazendo agora.</p>
+        <div class="list" id="homeDoing"></div>
+      </div>
+    </div>
+    <div class="how">
+      <div><b>1. Peça</b>Em “Novo pedido”, escolha o perfil, escreva a ideia e o tom, e cole o link do vídeo bruto no Google Drive.</div>
+      <div><b>2. O assistente produz</b>Roteiro, legenda, arte ou vídeo editado no estilo que você cadastrou para o perfil.</div>
+      <div><b>3. Você revisa</b>Aprove ou peça ajuste. Cada ajuste volta para a fila com o seu comentário.</div>
+      <div><b>4. Publica</b>O que você aprovar é agendado no Instagram na data que você escolheu.</div>
+    </div>
+  </section>
+
+  <!-- NOVO PEDIDO -->
+  <section data-view="novo" hidden>
+    <form id="orderForm" class="panel" novalidate>
+      <div class="fields">
+        <div class="full">
+          <label class="f" style="margin-bottom:6px">Para qual perfil?</label>
+          <div class="chips" id="orderProfiles"></div>
+        </div>
+        <div class="full">
+          <label class="f" style="margin-bottom:6px">O que você quer?</label>
+          <div class="chips" id="orderTypes"></div>
+        </div>
+        <label class="f full" for="o_ideia">Ideia
+          <span class="hint">Escreva do seu jeito: o assunto, o que quer mostrar, o que a pessoa deve sentir ou fazer depois de ver.</span>
+          <textarea id="o_ideia" placeholder="Ex.: antes e depois de um sofá de linho bege com mancha de vinho, mostrando que dá para salvar sem trocar o tecido"></textarea>
+        </label>
+        <div class="full">
+          <button type="button" class="ghost" id="btnIdeas">Me dá 5 ideias para este perfil</button>
+          <div class="ideas" id="ideas"></div>
+        </div>
+        <label class="f" for="o_titulo">Título curto
+          <span class="hint">Só para você achar depois.</span>
+          <input type="text" id="o_titulo" placeholder="Sofá de linho: antes e depois">
+        </label>
+        <label class="f" for="o_data">Quando quer postar?
+          <span class="hint">Deixe em branco se não tiver data.</span>
+          <input type="date" id="o_data">
+        </label>
+        <label class="f" for="o_tom">Tom de voz deste conteúdo
+          <span class="hint">Se ficar vazio, uso o tom cadastrado no perfil.</span>
+          <input type="text" id="o_tom" placeholder="Ex.: divertido, próximo, sem termos técnicos">
+        </label>
+        <label class="f" for="o_cta">O que a pessoa deve fazer?
+          <span class="hint">Chamada para ação.</span>
+          <input type="text" id="o_cta" placeholder="Ex.: chamar no direct para orçamento">
+        </label>
+        <label class="f full" for="o_bruto">Link do material bruto
+          <span class="hint">Pasta ou arquivo no Google Drive com o vídeo ou as fotos brutas. Deixe compartilhado com quem tem o link.</span>
+          <input type="url" id="o_bruto" placeholder="https://drive.google.com/…">
+        </label>
+        <label class="f full" for="o_refs">Referências
+          <span class="hint">Links de Reels, vídeos do YouTube ou perfis que mostram o jeito que você quer. Um por linha, com uma nota se quiser.</span>
+          <textarea id="o_refs" placeholder="https://www.instagram.com/reel/… legenda grande amarela, cortes rápidos"></textarea>
+        </label>
+        <label class="f full" for="o_files">Prints e imagens de referência
+          <span class="hint">Opcional. Imagens ou vídeos curtos de até 20 MB.</span>
+          <input type="file" id="o_files" multiple accept="image/*,video/*">
+          <div class="files-list" id="o_filesList"></div>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="primary" id="btnSend">Enviar pedido</button>
+        <span class="muted small" id="formMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- PRODUÇÃO -->
+  <section data-view="producao" hidden>
+    <div class="filters" id="boardFilters"></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- REVISAR -->
+  <section data-view="revisar" hidden>
+    <div class="list" id="reviewList"></div>
+  </section>
+
+  <!-- PERFIS -->
+  <section data-view="perfis" hidden>
+    <div class="filters" id="profTabs"></div>
+    <form id="profForm" class="panel" novalidate>
+      <div class="fields">
+        <label class="f" for="p_nome">Nome do perfil<input type="text" id="p_nome"></label>
+        <label class="f" for="p_handle">@ ou canal<input type="text" id="p_handle"></label>
+        <label class="f full" for="p_nicho">Sobre o negócio
+          <span class="hint">O que você faz, onde atende, o que diferencia.</span>
+          <textarea id="p_nicho"></textarea></label>
+        <label class="f" for="p_publico">Público
+          <span class="hint">Quem você quer atrair.</span>
+          <textarea id="p_publico"></textarea></label>
+        <label class="f" for="p_tom">Tom de voz
+          <span class="hint">Como você fala. Palavras que usa e que não usa.</span>
+          <textarea id="p_tom"></textarea></label>
+        <label class="f full" for="p_pilares">Pilares de conteúdo
+          <span class="hint">Os temas que se repetem. Um por linha.</span>
+          <textarea id="p_pilares"></textarea></label>
+        <label class="f" for="p_cores">Cores da marca
+          <span class="hint">Nomes ou códigos, separados por vírgula.</span>
+          <input type="text" id="p_cores"></label>
+        <label class="f" for="p_fontes">Fontes
+          <span class="hint">Títulos e textos.</span>
+          <input type="text" id="p_fontes"></label>
+        <div class="full"><h3 style="margin-top:8px">Estilo de edição de vídeo</h3>
+          <p class="muted small" style="margin:4px 0 0">É o que o editor segue em todo vídeo deste perfil. Quanto mais exemplos, mais fiel fica.</p></div>
+        <label class="f full" for="p_exemplos">Vídeos de exemplo
+          <span class="hint">Links de vídeos editados do jeito que você quer. Um por linha. Diga o que gosta em cada um.</span>
+          <textarea id="p_exemplos"></textarea></label>
+        <label class="f" for="p_legenda">Legenda na tela
+          <span class="hint">Fonte, cor, tamanho, posição, palavra destacada.</span>
+          <input type="text" id="p_legenda"></label>
+        <label class="f" for="p_ritmo">Ritmo e cortes
+          <span class="hint">Cortar pausas? Zoom nos destaques? Duração ideal?</span>
+          <input type="text" id="p_ritmo"></label>
+        <label class="f" for="p_musica">Música e efeitos sonoros<input type="text" id="p_musica"></label>
+        <label class="f" for="p_formato">Formato
+          <span class="hint">Vertical 9:16, horizontal 16:9 ou os dois.</span>
+          <input type="text" id="p_formato"></label>
+        <label class="f full" for="p_aberto">Abertura, encerramento e o que evitar<textarea id="p_aberto"></textarea></label>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="primary">Salvar perfil</button>
+        <span class="muted small" id="profMsg"></span>
+      </div>
+    </form>
+  </section>
+
+  <!-- DESEMPENHO -->
+  <section data-view="desempenho" hidden>
+    <p class="muted" style="margin-top:0">Os números vêm do Instagram pela Zernio. O assistente atualiza esta aba e escreve o que está funcionando com o seu público.</p>
+    <div class="perf" id="perf"></div>
+  </section>
+</div>
+
+<div id="drawerRoot"></div>
+
+<script>
+(function(){
+const TYPES=[
+  {id:"reel",label:"Reel"},
+  {id:"carrossel",label:"Carrossel"},
+  {id:"post",label:"Post (imagem)"},
+  {id:"stories",label:"Stories"},
+  {id:"youtube",label:"Vídeo YouTube"},
+  {id:"roteiro",label:"Só roteiro"},
+  {id:"plano",label:"Plano do mês"}
+];
+const STATUS=[
+  {id:"fila",label:"Na fila"},
+  {id:"produzindo",label:"Produzindo"},
+  {id:"revisar",label:"Para revisar"},
+  {id:"ajustes",label:"Ajustes pedidos"},
+  {id:"aprovado",label:"Aprovado"},
+  {id:"publicado",label:"Publicado"}
+];
+const statusLabel=id=>(STATUS.find(s=>s.id===id)||{label:id}).label;
+const typeLabel=id=>(TYPES.find(t=>t.id===id)||{label:id}).label;
+
+const state={profiles:[],orders:[],metrics:{},tab:"inicio",orderProfile:null,orderType:"reel",editProfile:null,boardFilter:"todos",pendingFiles:[]};
+let db=null, assets=null, sample=null;
+
+const $=s=>document.querySelector(s);
+const el=(tag,attrs={},...kids)=>{const n=document.createElement(tag);for(const[k,v]of Object.entries(attrs)){if(v==null)continue;if(k==="class")n.className=v;else if(k==="style")n.setAttribute("style",v);else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);else n.setAttribute(k,v);}for(const k of kids.flat()){if(k==null||k===false)continue;n.append(k.nodeType?k:document.createTextNode(String(k)));}return n;};
+const safeUrl=u=>typeof u==="string"&&/^https:\/\//i.test(u.trim())?u.trim():null;
+const fmtDate=s=>{if(!s)return"";const d=new Date(s.length===10?s+"T12:00:00":s);return isNaN(d)?s:d.toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});};
+const fmtNum=n=>typeof n==="number"?n.toLocaleString("pt-BR"):(n||"–");
+const profColor=p=>p&&p.cor?`var(--c-${p.cor})`:"var(--accent)";
+const profById=id=>state.profiles.find(p=>p.id===id);
+function toast(msg){const t=el("div",{class:"toast",role:"status"},msg);document.body.append(t);setTimeout(()=>t.remove(),2600);}
+
+/* ---------- Abas ---------- */
+function setTab(t){
+  state.tab=t;
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
+  document.querySelectorAll("section[data-view]").forEach(s=>s.hidden=s.dataset.view!==t);
+  if(location.hash.slice(1)!==t){try{history.replaceState(null,"","#"+t);}catch(e){}}
+  try{localStorage.setItem("estudio-tab",t);}catch(e){}
+}
+document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab);});
+window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(document.querySelector(`[data-view="${h}"]`))setTab(h);});
+
+/* ---------- Render ---------- */
+function render(){renderProfCards();renderHome();renderOrderForm();renderBoard();renderReview();renderProfTabs();renderPerf();
+  const n=state.orders.filter(o=>o.status==="revisar").length;const c=$("#revCount");c.hidden=!n;c.textContent=n;}
+
+function emptyBox(msg){return el("div",{class:"empty"},msg);}
+
+function renderProfCards(){
+  const box=$("#profCards");box.replaceChildren();
+  if(!state.profiles.length){box.append(emptyBox(db?"Nenhum perfil ainda. Cadastre em “Perfis e estilo”.":"Carregando perfis…"));return;}
+  for(const p of state.profiles){
+    const os=state.orders.filter(o=>o.perfilId===p.id);
+    const m=state.metrics[p.id]||{};
+    const card=el("div",{class:"prof",style:`--pc:${profColor(p)}`},
+      el("div",{class:"tag"},el("span",{class:"dot"}),p.nome||p.id),
+      el("div",{class:"muted small"},p.handle||""),
+      el("div",{class:"stats"},
+        el("div",{},el("b",{},fmtNum(m.seguidores)),"seguidores"),
+        el("div",{},el("b",{},String(os.filter(o=>["fila","produzindo","ajustes"].includes(o.status)).length)),"em produção"),
+        el("div",{},el("b",{},String(os.filter(o=>o.status==="revisar").length)),"para revisar")),
+      el("div",{},el("button",{type:"button",onclick:()=>{state.orderProfile=p.id;setTab("novo");renderOrderForm();}},"Novo pedido")));
+    box.append(card);
+  }
+}
+
+function orderRow(o){
+  const p=profById(o.perfilId);
+  return el("button",{type:"button",class:"row",style:`--pc:${profColor(p)}`,onclick:()=>openOrder(o.id)},
+    el("span",{class:"dot"}),
+    el("span",{class:"t"},o.titulo||o.ideia||"Sem título"),
+    el("span",{class:"pill"},typeLabel(o.tipo)),
+    el("span",{class:"pill s-"+o.status},statusLabel(o.status)));
+}
+function renderHome(){
+  const r=$("#homeReview"),d=$("#homeDoing");
+  const rev=state.orders.filter(o=>o.status==="revisar");
+  const doing=state.orders.filter(o=>["fila","produzindo","ajustes"].includes(o.status));
+  r.replaceChildren(...(rev.length?rev.map(orderRow):[emptyBox("Nada para revisar agora.")]));
+  d.replaceChildren(...(doing.length?doing.map(orderRow):[emptyBox("Nenhum pedido na fila. Faça um em “Novo pedido”.")]));
+}
+
+function renderOrderForm(){
+  const pc=$("#orderProfiles");pc.replaceChildren();
+  if(!state.orderProfile&&state.profiles[0])state.orderProfile=state.profiles[0].id;
+  for(const p of state.profiles){
+    pc.append(el("button",{type:"button",class:"chip",style:`--pc:${profColor(p)}`,"aria-pressed":String(state.orderProfile===p.id),onclick:()=>{state.orderProfile=p.id;renderOrderForm();}},el("span",{class:"dot"}),p.nome));
+  }
+  if(!state.profiles.length)pc.append(el("span",{class:"muted small"},"Cadastre um perfil primeiro."));
+  const tc=$("#orderTypes");tc.replaceChildren();
+  for(const t of TYPES){tc.append(el("button",{type:"button",class:"chip","aria-pressed":String(state.orderType===t.id),onclick:()=>{state.orderType=t.id;renderOrderForm();}},t.label));}
+  const fl=$("#o_filesList");fl.replaceChildren(...state.pendingFiles.map(f=>el("span",{class:"pill"},f.name)));
+}
+
+function renderBoard(){
+  const f=$("#boardFilters");f.replaceChildren();
+  const opts=[{id:"todos",nome:"Todos"},...state.profiles];
+  for(const p of opts){f.append(el("button",{type:"button",class:"chip",style:p.cor?`--pc:${profColor(p)}`:null,"aria-pressed":String(state.boardFilter===p.id),onclick:()=>{state.boardFilter=p.id;renderBoard();}},p.cor?el("span",{class:"dot"}):null,p.nome));}
+  const b=$("#board");b.replaceChildren();
+  const list=state.orders.filter(o=>state.boardFilter==="todos"||o.perfilId===state.boardFilter);
+  for(const s of STATUS){
+    const items=list.filter(o=>o.status===s.id);
+    const col=el("div",{class:"col"},el("h3",{},s.label,el("span",{class:"muted"},String(items.length))));
+    for(const o of items){
+      const p=profById(o.perfilId);
+      col.append(el("button",{type:"button",class:"card",style:`--pc:${profColor(p)}`,onclick:()=>openOrder(o.id)},
+        el("span",{},o.titulo||o.ideia||"Sem título"),
+        el("span",{class:"meta"},el("span",{},p?p.nome:""),"·",el("span",{},typeLabel(o.tipo)),o.dataPostagem?el("span",{},"· "+fmtDate(o.dataPostagem)):null)));
+    }
+    b.append(col);
+  }
+}
+
+function renderReview(){
+  const box=$("#reviewList");
+  const rev=state.orders.filter(o=>o.status==="revisar");
+  box.replaceChildren(...(rev.length?rev.map(orderRow):[emptyBox("Quando o assistente terminar um conteúdo, ele aparece aqui para você aprovar.")]));
+}
+
+function renderProfTabs(){
+  const f=$("#profTabs");f.replaceChildren();
+  if(!state.editProfile&&state.profiles[0])state.editProfile=state.profiles[0].id;
+  for(const p of state.profiles){f.append(el("button",{type:"button",class:"chip",style:`--pc:${profColor(p)}`,"aria-pressed":String(state.editProfile===p.id),onclick:()=>{state.editProfile=p.id;renderProfTabs();}},el("span",{class:"dot"}),p.nome));}
+  const p=profById(state.editProfile);const form=$("#profForm");form.hidden=!p;if(!p)return;
+  const e=p.estilo||{};
+  const set=(id,v)=>{const n=$("#"+id);if(document.activeElement!==n)n.value=v||"";};
+  set("p_nome",p.nome);set("p_handle",p.handle);set("p_nicho",p.nicho);set("p_publico",p.publico);set("p_tom",p.tom);
+  set("p_pilares",(p.pilares||[]).join("\n"));set("p_cores",p.cores);set("p_fontes",p.fontes);
+  set("p_exemplos",e.exemplos);set("p_legenda",e.legenda);set("p_ritmo",e.ritmo);set("p_musica",e.musica);set("p_formato",e.formato);set("p_aberto",e.abertura);
+}
+
+function renderPerf(){
+  const box=$("#perf");box.replaceChildren();
+  if(!state.profiles.length){box.append(emptyBox("Sem perfis ainda."));return;}
+  for(const p of state.profiles){
+    const m=state.metrics[p.id];
+    const card=el("div",{class:"panel",style:`--pc:${profColor(p)}`},el("div",{class:"tag",style:"display:flex;gap:8px;align-items:center;margin-bottom:10px"},el("span",{class:"dot"}),el("h3",{},p.nome)));
+    if(!m){card.append(emptyBox(p.zernioId?"Ainda sem leitura. Peça ao assistente: “atualiza o desempenho”.":"Este perfil ainda não está ligado à Zernio. Conecte-o lá para ver os números."));box.append(card);continue;}
+    card.append(el("div",{class:"kpis"},
+      el("div",{class:"kpi"},el("b",{},fmtNum(m.seguidores)),el("span",{},"seguidores")),
+      el("div",{class:"kpi"},el("b",{},fmtNum(m.alcance30d)),el("span",{},"alcance em 30 dias")),
+      el("div",{class:"kpi"},el("b",{},m.engajamento!=null?String(m.engajamento).replace(".",",")+"%":"–"),el("span",{},"engajamento"))));
+    if(m.insights){card.append(el("div",{class:"block",style:"margin-top:12px"},el("h4",{},"O que está funcionando"),el("div",{class:"pre"},m.insights)));}
+    if(Array.isArray(m.topPosts)&&m.topPosts.length){
+      const tb=el("tbody");for(const t of m.topPosts.slice(0,5)){const u=safeUrl(t.link);tb.append(el("tr",{},el("td",{},u?el("a",{href:u,target:"_blank",rel:"noopener"},t.titulo||"post"):(t.titulo||"post")),el("td",{},t.tipo||""),el("td",{class:"n"},fmtNum(t.alcance))));}
+      card.append(el("div",{style:"margin-top:12px;overflow-x:auto"},el("table",{},el("thead",{},el("tr",{},el("th",{},"Melhores posts"),el("th",{},"Tipo"),el("th",{class:"n"},"Alcance"))),tb)));
+    }
+    if(m.atualizadoEm)card.append(el("p",{class:"muted small",style:"margin:10px 0 0"},"Atualizado em "+fmtDate(m.atualizadoEm)));
+    box.append(card);
+  }
+}
+
+/* ---------- Detalhe do pedido ---------- */
+function closeDrawer(){$("#drawerRoot").replaceChildren();openId=null;}
+let openId=null;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+function openOrder(id){openId=id;drawOrder();}
+function drawOrder(){
+  const o=state.orders.find(x=>x.id===openId);if(!o){closeDrawer();return;}
+  const p=profById(o.perfilId);const ent=o.entrega||{};
+  const root=$("#drawerRoot");
+  const linkOrText=v=>{const u=safeUrl(v);return u?el("a",{href:u,target:"_blank",rel:"noopener"},u.length>60?u.slice(0,60)+"…":u):v;};
+  const refs=(o.referencias||"").split("\n").filter(Boolean).map(l=>{const m=l.match(/https:\/\/\S+/);return el("div",{},m?[el("a",{href:m[0],target:"_blank",rel:"noopener"},m[0].length>60?m[0].slice(0,60)+"…":m[0])," "+l.replace(m[0],"").trim()]:l);});
+  const thumbs=(o.arquivos||[]).map(a=>{const src="/_blob/"+encodeURIComponent(a.id);return (a.tipo||"").startsWith("video")?el("video",{src,controls:"",preload:"metadata"}):el("img",{src,alt:a.nome||"referência"});});
+  const delivered=[];
+  if(ent.resumo)delivered.push(el("div",{class:"pre"},ent.resumo));
+  if(ent.roteiro)delivered.push(el("h4",{},"Roteiro"),el("div",{class:"pre"},ent.roteiro));
+  if(ent.legenda)delivered.push(el("h4",{},"Legenda"),el("div",{class:"pre"},ent.legenda),el("div",{},el("button",{type:"button",onclick:()=>copy(ent.legenda)},"Copiar legenda")));
+  if(ent.hashtags)delivered.push(el("h4",{},"Hashtags"),el("div",{class:"pre"},ent.hashtags));
+  const links=(ent.links||[]).filter(l=>safeUrl(l.url));
+  if(links.length)delivered.push(el("h4",{},"Arquivos prontos"),...links.map(l=>el("div",{},el("a",{href:safeUrl(l.url),target:"_blank",rel:"noopener"},l.nome||"Abrir"))));
+  const thread=(o.conversa||[]).map(m=>el("div",{class:"msg"},el("small",{},(m.de==="assistente"?"Assistente":"Você")+" · "+fmtDate(m.em)),m.texto));
+  const fb=el("textarea",{id:"fbText",placeholder:"Ex.: a legenda está longa, deixa em 3 linhas. No vídeo, tira o trecho do minuto 1:20."});
+  const actions=el("div",{class:"form-actions"});
+  if(o.status==="revisar"){
+    actions.append(el("button",{type:"button",class:"primary",onclick:()=>changeStatus(o,"aprovado",fb.value)},"Aprovar"),
+                   el("button",{type:"button",onclick:()=>{if(!fb.value.trim()){toast("Escreva o que precisa mudar.");fb.focus();return;}changeStatus(o,"ajustes",fb.value);}},"Pedir ajuste"));
+  } else if(o.status==="aprovado"){
+    actions.append(el("button",{type:"button",onclick:()=>changeStatus(o,"publicado",fb.value)},"Marcar como publicado"),el("button",{type:"button",class:"ghost",onclick:()=>changeStatus(o,"revisar",fb.value)},"Voltar para revisão"));
+  } else {
+    actions.append(el("button",{type:"button",onclick:()=>addNote(o,fb.value)},"Enviar comentário"));
+  }
+  actions.append(el("button",{type:"button",class:"ghost",onclick:()=>confirmDelete(o,actions)},"Excluir pedido"));
+  root.replaceChildren(
+    el("div",{class:"drawer-bg",onclick:closeDrawer}),
+    el("aside",{class:"drawer",role:"dialog","aria-label":"Detalhes do pedido",style:`--pc:${profColor(p)}`},
+      el("div",{class:"head"},el("div",{},
+        el("div",{style:"display:flex;gap:8px;align-items:center;margin-bottom:6px"},el("span",{class:"dot"}),el("span",{class:"muted small"},p?p.nome:""),el("span",{class:"pill s-"+o.status},statusLabel(o.status))),
+        el("h2",{},o.titulo||"Sem título")),
+        el("button",{type:"button",class:"ghost","aria-label":"Fechar",onclick:closeDrawer},"Fechar")),
+      delivered.length?el("div",{class:"block"},el("h4",{},"Entrega do assistente"),...delivered):null,
+      el("div",{class:"block"},el("h4",{},"Seu pedido"),
+        el("dl",{class:"kv"},
+          el("dt",{},"Formato"),el("dd",{},typeLabel(o.tipo)),
+          el("dt",{},"Postar em"),el("dd",{},o.dataPostagem?fmtDate(o.dataPostagem):"Sem data"),
+          el("dt",{},"Tom"),el("dd",{},o.tom||"o do perfil"),
+          o.cta?el("dt",{},"Chamada"):null,o.cta?el("dd",{},o.cta):null,
+          o.linkBruto?el("dt",{},"Material bruto"):null,o.linkBruto?el("dd",{},linkOrText(o.linkBruto)):null),
+        el("div",{class:"pre"},o.ideia||""),
+        refs.length?el("h4",{},"Referências"):null,...refs,
+        thumbs.length?el("div",{class:"thumbs"},...thumbs):null),
+      thread.length?el("div",{class:"block"},el("h4",{},"Conversa"),el("div",{class:"thread"},...thread)):null,
+      el("div",{class:"block"},el("h4",{},o.status==="revisar"?"Sua avaliação":"Comentário"),fb,actions)));
+}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast("Legenda copiada");}catch(e){toast("Não deu para copiar. Selecione o texto e copie.");}}
+function confirmDelete(o,box){
+  box.replaceChildren(el("span",{class:"small"},"Excluir este pedido de vez?"),
+    el("button",{type:"button",onclick:async()=>{try{await db.collection("pedidos").doc(o.id).delete();closeDrawer();toast("Pedido excluído");}catch(e){toast("Não consegui excluir: "+(e.message||e.code));}}},"Sim, excluir"),
+    el("button",{type:"button",class:"ghost",onclick:drawOrder},"Cancelar"));
+}
+async function changeStatus(o,status,note){
+  const conversa=[...(o.conversa||[])];
+  if(note&&note.trim())conversa.push({de:"voce",texto:note.trim(),em:new Date().toISOString()});
+  try{await db.collection("pedidos").doc(o.id).update({status,conversa,atualizadoEm:new Date().toISOString()});
+    toast(status==="aprovado"?"Aprovado":status==="ajustes"?"Ajuste enviado ao assistente":status==="publicado"?"Marcado como publicado":"Atualizado");
+  }catch(e){toast("Não consegui salvar: "+(e.message||e.code));}
+}
+async function addNote(o,note){
+  if(!note.trim()){toast("Escreva o comentário.");return;}
+  const conversa=[...(o.conversa||[]),{de:"voce",texto:note.trim(),em:new Date().toISOString()}];
+  try{await db.collection("pedidos").doc(o.id).update({conversa,atualizadoEm:new Date().toISOString()});toast("Comentário enviado");}
+  catch(e){toast("Não consegui salvar: "+(e.message||e.code));}
+}
+
+/* ---------- Novo pedido ---------- */
+$("#o_files").addEventListener("change",e=>{state.pendingFiles=[...e.target.files].filter(f=>f.size<=20*1024*1024);if(state.pendingFiles.length<e.target.files.length)toast("Arquivos acima de 20 MB ficaram de fora. Use o link do Drive.");renderOrderForm();});
+$("#orderForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const msg=$("#formMsg");
+  if(!db){msg.textContent="Sem conexão com o banco. Abra o painel logada no claude.ai.";return;}
+  if(!state.orderProfile){msg.textContent="Escolha o perfil.";return;}
+  const ideia=$("#o_ideia").value.trim();
+  if(!ideia){msg.textContent="Escreva a ideia.";$("#o_ideia").focus();return;}
+  const btn=$("#btnSend");btn.disabled=true;msg.textContent="Enviando…";
+  try{
+    const arquivos=[];
+    if(state.pendingFiles.length){
+      if(!assets){msg.textContent="Envio de arquivos indisponível aqui; mandei o pedido sem eles.";}
+      else for(const f of state.pendingFiles){const r=await assets.upload(f);arquivos.push({id:r.id,nome:f.name,tipo:f.type});}
+    }
+    const now=new Date().toISOString();
+    await db.collection("pedidos").add({
+      perfilId:state.orderProfile,tipo:state.orderType,
+      titulo:$("#o_titulo").value.trim()||ideia.slice(0,60),
+      ideia,tom:$("#o_tom").value.trim(),cta:$("#o_cta").value.trim(),
+      dataPostagem:$("#o_data").value||"",linkBruto:$("#o_bruto").value.trim(),
+      referencias:$("#o_refs").value.trim(),arquivos,
+      status:"fila",conversa:[],entrega:{},criadoEm:now,atualizadoEm:now});
+    for(const id of["o_ideia","o_titulo","o_tom","o_cta","o_data","o_bruto","o_refs","o_files"])$("#"+id).value="";
+    state.pendingFiles=[];$("#ideas").replaceChildren();renderOrderForm();
+    msg.textContent="";toast("Pedido enviado para a fila");setTab("producao");
+  }catch(err){msg.textContent="Não consegui enviar: "+(err.message||err.code||err);}
+  finally{btn.disabled=false;}
+});
+
+/* ---------- Ideias com Claude ---------- */
+$("#btnIdeas").addEventListener("click",async()=>{
+  const box=$("#ideas");
+  if(!sample){box.replaceChildren(el("p",{class:"muted small"},"Gerar ideias não está disponível nesta visualização."));return;}
+  const p=profById(state.orderProfile);if(!p){toast("Escolha o perfil primeiro.");return;}
+  const m=state.metrics[p.id];
+  box.replaceChildren(el("p",{class:"muted small"},"Pensando em ideias…"));
+  const prompt=`Você é estrategista de conteúdo para Instagram e YouTube no Brasil. Gere 5 ideias de ${typeLabel(state.orderType)} para este perfil.
+Perfil: ${p.nome} (${p.handle||""})
+Negócio: ${p.nicho||""}
+Público: ${p.publico||""}
+Tom de voz: ${p.tom||""}
+Pilares: ${(p.pilares||[]).join("; ")}
+${m&&m.insights?"O que tem funcionado: "+m.insights:""}
+${$("#o_ideia").value.trim()?"Rascunho da dona: "+$("#o_ideia").value.trim():""}
+Responda só com JSON: [{"titulo":"até 8 palavras","ideia":"2 frases dizendo o que mostrar e o gancho dos 3 primeiros segundos"}]`;
+  try{
+    const r=await sample.json(prompt,{modelTier:"quick"});
+    const list=Array.isArray(r)?r:(r&&r.ideias)||[];
+    box.replaceChildren(...list.slice(0,5).map(i=>el("button",{type:"button",class:"idea",onclick:()=>{$("#o_ideia").value=i.ideia||"";$("#o_titulo").value=i.titulo||"";toast("Ideia copiada para o pedido");}},String(i.titulo||""),el("small",{},String(i.ideia||"")))));
+    if(!list.length)box.replaceChildren(el("p",{class:"muted small"},"Não veio nenhuma ideia. Tente de novo."));
+  }catch(e){
+    const hide=["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code);
+    box.replaceChildren(el("p",{class:"muted small"},hide?"Gerar ideias não está liberado para esta página.":e.code==="rate_limited"?"Muitos pedidos seguidos. Tente daqui a pouco.":"Não deu certo agora. Tente de novo."));
+    if(hide)$("#btnIdeas").hidden=true;
+  }
+});
+
+/* ---------- Salvar perfil ---------- */
+$("#profForm").addEventListener("submit",async e=>{
+  e.preventDefault();const p=profById(state.editProfile);if(!p||!db)return;
+  const v=id=>$("#"+id).value.trim();
+  try{
+    await db.collection("perfis").doc(p.id).update({nome:v("p_nome"),handle:v("p_handle"),nicho:v("p_nicho"),publico:v("p_publico"),tom:v("p_tom"),
+      pilares:v("p_pilares").split("\n").map(s=>s.trim()).filter(Boolean),cores:v("p_cores"),fontes:v("p_fontes"),
+      estilo:{exemplos:v("p_exemplos"),legenda:v("p_legenda"),ritmo:v("p_ritmo"),musica:v("p_musica"),formato:v("p_formato"),abertura:v("p_aberto")},
+      atualizadoEm:new Date().toISOString()});
+    $("#profMsg").textContent="";toast("Perfil salvo");
+  }catch(err){$("#profMsg").textContent="Não consegui salvar: "+(err.message||err.code);}
+});
+
+/* ---------- Conexão ---------- */
+async function boot(){
+  try{const t=localStorage.getItem("estudio-tab");const h=location.hash.slice(1);setTab(document.querySelector(`[data-view="${h}"]`)?h:(t||"inicio"));}catch(e){setTab("inicio");}
+  render();
+  if(!window.claude||!window.claude.use){$("#conn").textContent="Abra este painel no claude.ai para salvar os pedidos.";return;}
+  const timer=setTimeout(()=>{if(!db)$("#conn").textContent="Sem resposta do banco. Recarregue a página.";},10000);
+  db=await window.claude.use("db");
+  clearTimeout(timer);
+  if(!db){$("#conn").textContent="Entre no claude.ai para ver e salvar os pedidos.";render();return;}
+  $("#conn").textContent="Conectado";
+  window.claude.use("assets").then(a=>{assets=a;if(!a)$("#o_files").closest("label").hidden=true;});
+  window.claude.use("sample").then(s=>{sample=s;if(!s)$("#btnIdeas").hidden=true;});
+  const err=e=>{$("#conn").textContent="Erro ao ler dados: "+(e.message||e.code);};
+  db.collection("perfis").orderBy("ordem").onSnapshot(s=>{state.profiles=s.docs.map(d=>({id:d.id,...d.data()}));render();},err);
+  db.collection("pedidos").orderBy("criadoEm","desc").onSnapshot(s=>{state.orders=s.docs.map(d=>({id:d.id,...d.data()}));render();if(openId)drawOrder();},err);
+  db.collection("metricas").onSnapshot(s=>{const m={};s.docs.forEach(d=>m[d.id]=d.data());state.metrics=m;render();},err);
+}
+boot();
+})();
+</script>
